@@ -11,6 +11,55 @@ var METHOD_NOT_ALLOWED = 405;
 
 describe('CORS: preflight requests', function() {
 
+  describe('Generic', function() {
+
+    // In this configuration, we want to always reply with "*"
+    // Responses can be cached by reverse proxies, so they must all look the same
+
+    var server = test.corsServer({
+      origins: ['*'],
+      allowHeaders: ['MyHeader']
+    });
+
+    it ('6.1 Always replies with generic CORS headers', function(done) {
+      request(server)
+        .options('/test')
+        .set('Origin', 'http://api.myapp.com')
+        .expect('access-control-allow-origin', '*')
+        .expect('access-control-allow-methods', 'GET, PUT, POST, DELETE, OPTIONS')
+        .expect('Access-Control-Allow-Headers', /x-requested-with/)
+        .expect('Access-Control-Allow-Headers', /MyHeader/)
+        .expect(204)
+        .end(done);
+    });
+
+    it ('6.1 Includes CORS headers even if the request has no Origin', function(done) {
+      request(server)
+        .options('/test')
+        .expect('access-control-allow-origin', '*')
+        .expect('access-control-allow-methods', 'GET, PUT, POST, DELETE, OPTIONS')
+        .expect('Access-Control-Allow-Headers', /x-requested-with/)
+        .expect('Access-Control-Allow-Headers', /MyHeader/)
+        .expect(204)
+        .end(done);
+    });
+
+    it('6.4 Does not need the Vary header since all responses are the same', function(done) {
+      request(server)
+        .options('/test')
+        .set('Origin', 'http://api.myapp.com')
+        .expect(test.noHeader('vary'))
+        .expect(204)
+        .end(done);
+    });
+
+  });
+
+  describe('Full implementation', function() {
+
+    // This is the full implementation
+    // Where responses actually vary depending on the request
+
     it('6.2.1 Does not set headers if Origin is missing', function(done) {
       var server = test.corsServer({
         origins: ['http://api.myapp.com', 'http://www.myapp.com']
@@ -116,5 +165,20 @@ describe('CORS: preflight requests', function() {
         .expect(204)
         .end(done);
     });
+
+    it('6.4 Sets the Vary header if it returns the actual origin', function(done) {
+      var server = test.corsServer({
+        origins: ['http://api.myapp.com']
+      });
+      request(server)
+        .options('/test')
+        .set('Origin', 'http://api.myapp.com')
+        .set('Access-Control-Request-Method', 'GET')
+        .expect('vary', 'Origin')
+        .expect(204)
+        .end(done);
+    });
+
+  });
 
 });

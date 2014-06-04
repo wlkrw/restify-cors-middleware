@@ -17,6 +17,37 @@ var HTTP_NO_CONTENT = 204;
 
 exports.handler = function(options) {
 
+  //
+  // If origins = ['*'] then we always set generic CORS headers
+  // This is the simplest case, similar to what restify.fullResponse() used to do
+  // Must must keep the headers generic because they can be cached by reverse proxies
+  //
+
+  if (origin.generic(options.origins)) {
+
+    return function(req, res, next) {
+      if (req.method !== 'OPTIONS') return next();
+
+      res.once('header', function() {
+        var allowedHeaders = DEFAULT_ALLOW_HEADERS.concat(['x-requested-with'])
+                                                  .concat(options.allowHeaders);
+        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Credentials', false); // not compatible with *
+        res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
+        res.header('Access-Control-Allow-Headers', allowedHeaders.join(', '));
+      });
+
+      res.send(HTTP_NO_CONTENT);
+    };
+
+  }
+
+  //
+  // This is the "better" option where we have a list of origins
+  // In this case, we return customised CORS headers for each request
+  // And must set the "Vary: Origin" header
+  //
+
   return function(req, res, next) {
     if (req.method !== 'OPTIONS') return next();
 
@@ -27,12 +58,9 @@ exports.handler = function(options) {
     // 6.2.3
     requestedMethod = req.headers['access-control-request-method'];
     if (!requestedMethod) return next();
+    allowedMethods = [requestedMethod, 'OPTIONS'];
 
     // 6.2.4
-    requestedHeaders = req.headers['access-control-request-headers'];
-    requestedHeaders = requestedHeaders ? requestedHeaders.split(', ') : [];
-
-    allowedMethods = [requestedMethod, 'OPTIONS'];
     allowedHeaders = DEFAULT_ALLOW_HEADERS.concat(['x-requested-with'])
                                           .concat(options.allowHeaders);
 
@@ -48,6 +76,8 @@ exports.handler = function(options) {
       // 6.2.10
       res.header('Access-Control-Allow-Headers', allowedHeaders.join(', '));
 
+      // 6.4
+      res.header('Vary', 'Origin');
     });
 
     res.send(HTTP_NO_CONTENT);

@@ -1,4 +1,8 @@
 
+exports.generic = function(list) {
+  return list.length === 1 && list[0] === '*';
+};
+
 exports.allowed = function(list, requestOrigin) {
   function match(origin) {
     if (origin.indexOf('*') !== -1) {

@@ -19,26 +19,26 @@ server.use(cors.actual);
 
 ## Allowed origins
 
-As a convenience method, you can use the `*` character as a wildcard. This means you can allow any origins:
+If you understand the security implication, you can choose to return `Access-Control-Allow-Origin: *` with every response, regardless of the origin.
 
 ```js
 origins: ['*']
 ```
 
-Or you can also allow selected subdomains of your application:
+For better control, you should specify which origins are allowed specifically.
 
 ```js
 origins: [
   'http://myapp.com',
-  'http://*.myapp.com'
+  'http://*.myotherapp.com'
 ]
 ```
 
-For added security, this middleware sets `Access-Control-Allow-Origin` to the origin that matched, not the configured wildcard.
+In this case, it will only set CORS headers when applicable. The `Access-Control-Allow-Origin` header will be set to the actual origin that matched, on a per-request basis. The person making the request will not know about the full configuration, like other allowed domains or any wildcards in use.
 
-## Troubleshooting
+## Performance vs security
 
-As per the spec, requests without an `Origin` will not receive any headers. Requests with a matching `Origin` will receive the appropriate response headers. Always be careful that any reverse proxies (e.g. Varnish) very their cache depending on the origin, so you don't serve CORS headers to the wrong request.
+Specifying a list of allowed origins is the safest option. However depending on your setup you might notice a hit in performance, since any reverse proxies will have to vary their cache depending on the request `Origin`.
 
 ## Compliance to the spec
 
